@@ -19,6 +19,23 @@
   [attributedString addAttribute:RCTLiveMarkdownTextAttributeName value:@(YES) range:fullRange];
 
   for (MarkdownRange *markdownRange in markdownRanges) {
+    // NovelAI fork: 'highlight' ranges carry their own style, so they bypass
+    // the type->markdownStyle lookup used by the built-in types.
+    if ([markdownRange.type isEqualToString:@"highlight"]) {
+      [self applyHighlightToAttributedString:attributedString
+                                       range:markdownRange.range
+                                       color:markdownRange.color
+                             backgroundColor:markdownRange.backgroundColor
+                                borderRadius:markdownRange.borderRadius];
+      continue;
+    }
+    // NovelAI fork: 'chip' renders the range as an inline NSTextAttachment pill.
+    if ([markdownRange.type isEqualToString:@"chip"]) {
+      [self applyChipToAttributedString:attributedString
+                          markdownRange:markdownRange
+                  defaultTextAttributes:defaultTextAttributes];
+      continue;
+    }
     [self applyRangeToAttributedString:attributedString
                                   type:std::string([markdownRange.type UTF8String])
                                  range:markdownRange.range
@@ -146,6 +163,86 @@
   } else {
     [attributedString addAttribute:NSBackgroundColorAttributeName value:backgroundColor range:range];
   }
+}
+
+// NovelAI fork: apply a 'highlight' range's per-range style. Foreground color
+// and background are independent and either may be nil. A non-nil background
+// uses the rounded text-background machinery (same as mentions) so emphasis
+// tints and macro chips can have a border radius; alpha is carried by the
+// color itself.
+- (void)applyHighlightToAttributedString:(NSMutableAttributedString *)attributedString
+                                   range:(const NSRange)range
+                                   color:(nullable UIColor *)color
+                         backgroundColor:(nullable UIColor *)backgroundColor
+                            borderRadius:(const CGFloat)borderRadius
+{
+  if (color != nil) {
+    [attributedString addAttribute:NSForegroundColorAttributeName value:color range:range];
+  }
+  if (backgroundColor != nil) {
+    if (@available(iOS 16.0, *)) {
+      RCTMarkdownTextBackground *textBackground = [[RCTMarkdownTextBackground alloc] init];
+      textBackground.color = backgroundColor;
+      textBackground.borderRadius = borderRadius;
+      [attributedString addAttribute:RCTLiveMarkdownTextBackgroundAttributeName value:textBackground range:range];
+    } else {
+      [attributedString addAttribute:NSBackgroundColorAttributeName value:backgroundColor range:range];
+    }
+  }
+}
+
+// NovelAI fork: render a rounded pill image containing `label` (subtle fill +
+// border, sized to the label). All metrics are in points, supplied by JS.
+static UIImage *RNLMRenderChipImage(NSString *label, UIColor *textColor, UIColor *bgColor, UIColor *_Nullable borderColor, CGFloat borderWidth, CGFloat radius, CGFloat paddingH, UIFont *font) {
+  NSDictionary<NSAttributedStringKey, id> *attrs = @{NSFontAttributeName : font, NSForegroundColorAttributeName : textColor};
+  CGSize textSize = [label sizeWithAttributes:attrs];
+  const CGFloat inset = borderColor != nil ? borderWidth : 0;
+  const CGFloat w = ceil(textSize.width) + paddingH * 2 + inset * 2;
+  const CGFloat h = ceil(font.lineHeight) + inset * 2;
+  const CGRect rect = CGRectMake(0, 0, w, h);
+  const CGRect strokeRect = CGRectInset(rect, inset / 2.0, inset / 2.0);
+
+  UIGraphicsImageRenderer *renderer = [[UIGraphicsImageRenderer alloc] initWithSize:rect.size];
+  return [renderer imageWithActions:^(UIGraphicsImageRendererContext *_Nonnull rendererContext) {
+    UIBezierPath *fillPath = [UIBezierPath bezierPathWithRoundedRect:rect cornerRadius:radius];
+    [bgColor setFill];
+    [fillPath fill];
+    if (borderColor != nil && borderWidth > 0) {
+      UIBezierPath *strokePath = [UIBezierPath bezierPathWithRoundedRect:strokeRect cornerRadius:radius];
+      strokePath.lineWidth = borderWidth;
+      [borderColor setStroke];
+      [strokePath stroke];
+    }
+    [label drawAtPoint:CGPointMake(paddingH + inset, (h - ceil(textSize.height)) / 2.0) withAttributes:attrs];
+  }];
+}
+
+// NovelAI fork: render a chip range (a single U+FFFC sentinel) as an inline
+// NSTextAttachment pill containing `label`: atomic and label-sized. Visual
+// metrics come from the range (JS-driven). The label uses the range's `color`,
+// or the editor's text colour when absent. `clipboardText` is stashed on the
+// sentinel so copy/cut can emit the macro's expansion instead of the sentinel.
+- (void)applyChipToAttributedString:(NSMutableAttributedString *)attributedString
+                      markdownRange:(nonnull MarkdownRange *)markdownRange
+              defaultTextAttributes:(nonnull NSDictionary<NSAttributedStringKey, id> *)defaultTextAttributes
+{
+  NSString *label = markdownRange.label;
+  if (label == nil || markdownRange.range.length == 0) {
+    return;
+  }
+  UIFont *baseFont = defaultTextAttributes[NSFontAttributeName] ?: [UIFont systemFontOfSize:UIFont.systemFontSize];
+  UIFont *font = markdownRange.fontScale > 0 ? [baseFont fontWithSize:baseFont.pointSize * markdownRange.fontScale] : baseFont;
+  UIColor *textColor = markdownRange.color ?: defaultTextAttributes[NSForegroundColorAttributeName] ?: UIColor.labelColor;
+  UIColor *bgColor = markdownRange.backgroundColor ?: UIColor.clearColor;
+  UIImage *pill = RNLMRenderChipImage(label, textColor, bgColor, markdownRange.borderColor, markdownRange.borderWidth, markdownRange.borderRadius, markdownRange.paddingHorizontal, font);
+
+  NSTextAttachment *attachment = [[NSTextAttachment alloc] init];
+  attachment.image = pill;
+  // Vertically center the pill on the line using the base (line) font.
+  attachment.bounds = CGRectMake(0, (baseFont.capHeight - pill.size.height) / 2.0, pill.size.width, pill.size.height);
+
+  [attributedString addAttribute:NSAttachmentAttributeName value:attachment range:markdownRange.range];
+  [attributedString addAttribute:RNLMChipCopyTextAttributeName value:(markdownRange.clipboardText ?: @"") range:markdownRange.range];
 }
 
 static void RCTApplyBaselineOffset(NSMutableAttributedString *attributedText, NSRange attributedTextRange)

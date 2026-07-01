@@ -1,11 +1,12 @@
 import {MarkdownTextInput} from '../src';
-import type {parseExpensiMark} from '../src';
+import type {MarkdownRange} from '../src';
 
 global.jsi_setMarkdownRuntime = jest.fn();
 global.jsi_registerMarkdownWorklet = jest.fn();
 global.jsi_unregisterMarkdownWorklet = jest.fn();
 
-const parseExpensiMarkMock: typeof parseExpensiMark = () => {
+// NovelAI fork: no-op parser mock; the fork ships its own parser worklet.
+const parserMock = (): MarkdownRange[] => {
   'worklet';
 
   return [];
@@ -13,4 +14,4 @@ const parseExpensiMarkMock: typeof parseExpensiMark = () => {
 
 const getWorkletRuntimeMock = () => ({});
 
-export {MarkdownTextInput, parseExpensiMarkMock as parseExpensiMark, getWorkletRuntimeMock as getWorkletRuntime};
+export {MarkdownTextInput, parserMock as parseExpensiMark, getWorkletRuntimeMock as getWorkletRuntime};

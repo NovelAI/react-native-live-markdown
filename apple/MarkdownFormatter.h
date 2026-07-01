@@ -10,6 +10,10 @@ const NSAttributedStringKey RCTLiveMarkdownTextBackgroundAttributeName = @"RCTLi
 
 const NSAttributedStringKey RCTLiveMarkdownBlockquoteDepthAttributeName = @"RCTLiveMarkdownBlockquoteDepth";
 
+// NovelAI fork: stored on each chip's sentinel char; its value is the text the
+// chip contributes to the clipboard on copy/cut (the macro expansion).
+const NSAttributedStringKey RNLMChipCopyTextAttributeName = @"RNLMChipCopyText";
+
 @interface MarkdownFormatter : NSObject
 
 - (void)formatAttributedString:(nonnull NSMutableAttributedString *)attributedString

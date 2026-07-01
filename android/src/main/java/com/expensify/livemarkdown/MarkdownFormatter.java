@@ -60,6 +60,40 @@ public class MarkdownFormatter {
     int start = markdownRange.getStart();
     int end = markdownRange.getEnd();
     switch (type) {
+      case "highlight":
+        // NovelAI fork: per-range style carried on the range itself. Foreground
+        // and background are independent; either may be absent. Background uses
+        // the rounded LineBackgroundSpan so emphasis tints / chips can round.
+        Integer highlightColor = markdownRange.getColor();
+        if (highlightColor != null) {
+          setSpan(ssb, new MarkdownForegroundColorSpan(highlightColor), start, end);
+        }
+        Integer highlightBackground = markdownRange.getBackgroundColor();
+        if (highlightBackground != null) {
+          setSpan(ssb, new MarkdownBackgroundSpan(highlightBackground, markdownRange.getBorderRadius(), start, end), start, end);
+        }
+        break;
+      case "chip":
+        // NovelAI fork: replace the range's text with a rounded label pill.
+        String chipLabel = markdownRange.getLabel();
+        if (chipLabel != null) {
+          String chipCopyText = markdownRange.getCopyText();
+          setSpan(
+            ssb,
+            new MarkdownChipSpan(
+              chipLabel,
+              chipCopyText != null ? chipCopyText : "",
+              markdownRange.getColor(),
+              markdownRange.getBackgroundColor(),
+              markdownRange.getBorderColor(),
+              markdownRange.getBorderWidth(),
+              markdownRange.getBorderRadius(),
+              markdownRange.getPaddingHorizontal(),
+              markdownRange.getFontScale()),
+            start,
+            end);
+        }
+        break;
       case "bold":
         setSpan(ssb, new MarkdownBoldSpan(), start, end);
         break;

@@ -18,6 +18,10 @@
 
 #import <objc/runtime.h>
 
+// NovelAI fork: defined in RCTUITextView+MarkdownClipboard.mm (same pod). Forward
+// declared to avoid depending on CocoaPods header mapping for a new header.
+void RNLMInstallMarkdownClipboard(void);
+
 using namespace facebook::react;
 
 @implementation MarkdownTextInputDecoratorComponentView {
@@ -119,6 +123,9 @@ using namespace facebook::react;
     // https://github.com/Expensify/react-native-live-markdown/issues/87
   } else if ([backedTextInputView isKindOfClass:[RCTUITextView class]]) {
     _textView = (RCTUITextView *)backedTextInputView;
+
+    // NovelAI fork: ensure copy/cut emit chip copy text (don't rely on +load).
+    RNLMInstallMarkdownClipboard();
 
     // Enable TextView AdaptiveImageGlyph support for iOS 18.0+
     [self enableAdaptiveImageGlyphSupport:_textView];

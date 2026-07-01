@@ -2,6 +2,17 @@
 #import <RNLiveMarkdown/MarkdownGlobal.h>
 #import <React/RCTLog.h>
 
+// NovelAI fork: convert an ARGB integer (0xAARRGGBB, as emitted by a parser
+// worklet) into a UIColor. Read as a double from JSI and truncated to uint32.
+static UIColor *RNLMColorFromARGB(double value) {
+  const uint32_t argb = static_cast<uint32_t>(value);
+  const CGFloat a = ((argb >> 24) & 0xFF) / 255.0;
+  const CGFloat r = ((argb >> 16) & 0xFF) / 255.0;
+  const CGFloat g = ((argb >> 8) & 0xFF) / 255.0;
+  const CGFloat b = (argb & 0xFF) / 255.0;
+  return [UIColor colorWithRed:r green:g blue:b alpha:a];
+}
+
 @implementation MarkdownParser {
   NSString *_prevText;
   NSNumber *_prevParserId;
@@ -58,6 +69,36 @@
 
         NSRange range = NSMakeRange(start, length);
         MarkdownRange *markdownRange = [[MarkdownRange alloc] initWithType:@(type.c_str()) range:range depth:depth];
+
+        // NovelAI fork: read optional per-range style for 'highlight' ranges.
+        if (item.hasProperty(rt, "color")) {
+          markdownRange.color = RNLMColorFromARGB(item.getProperty(rt, "color").asNumber());
+        }
+        if (item.hasProperty(rt, "backgroundColor")) {
+          markdownRange.backgroundColor = RNLMColorFromARGB(item.getProperty(rt, "backgroundColor").asNumber());
+        }
+        if (item.hasProperty(rt, "borderRadius")) {
+          markdownRange.borderRadius = static_cast<CGFloat>(item.getProperty(rt, "borderRadius").asNumber());
+        }
+        if (item.hasProperty(rt, "label")) {
+          markdownRange.label = @(item.getProperty(rt, "label").asString(rt).utf8(rt).c_str());
+        }
+        if (item.hasProperty(rt, "copyText")) {
+          markdownRange.clipboardText = @(item.getProperty(rt, "copyText").asString(rt).utf8(rt).c_str());
+        }
+        if (item.hasProperty(rt, "borderColor")) {
+          markdownRange.borderColor = RNLMColorFromARGB(item.getProperty(rt, "borderColor").asNumber());
+        }
+        if (item.hasProperty(rt, "borderWidth")) {
+          markdownRange.borderWidth = static_cast<CGFloat>(item.getProperty(rt, "borderWidth").asNumber());
+        }
+        if (item.hasProperty(rt, "paddingHorizontal")) {
+          markdownRange.paddingHorizontal = static_cast<CGFloat>(item.getProperty(rt, "paddingHorizontal").asNumber());
+        }
+        if (item.hasProperty(rt, "fontScale")) {
+          markdownRange.fontScale = static_cast<CGFloat>(item.getProperty(rt, "fontScale").asNumber());
+        }
+
         [markdownRanges addObject:markdownRange];
       }
     } catch (const jsi::JSError &error) {

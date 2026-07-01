@@ -34,4 +34,10 @@ public class MarkdownTextInputDecoratorViewManager extends MarkdownTextInputDeco
   public void setParserId(@NonNull MarkdownTextInputDecoratorView view, int parserId) {
     view.setParserId(parserId);
   }
+
+  @Override
+  @ReactProp(name = "maxScrollHeight")
+  public void setMaxScrollHeight(@NonNull MarkdownTextInputDecoratorView view, float value) {
+    view.setMaxScrollHeight(value);
+  }
 }

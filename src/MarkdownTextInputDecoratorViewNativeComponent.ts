@@ -85,6 +85,10 @@ interface MarkdownStyle {
 interface NativeProps extends ViewProps {
   markdownStyle: MarkdownStyle;
   parserId: Int32;
+  // NovelAI fork: when > 0, the height cap (dp) below which the field shouldn't
+  // scroll. Android pins the EditText's scroll to 0 while content fits under it,
+  // suppressing RN's forced scroll-to-caret jump on grow. iOS ignores it.
+  maxScrollHeight?: Float;
 }
 
 export default codegenNativeComponent<NativeProps>('MarkdownTextInputDecoratorView', {

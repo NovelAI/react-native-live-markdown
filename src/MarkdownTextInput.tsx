@@ -61,6 +61,9 @@ interface MarkdownTextInputProps extends TextInputProps, InlineImagesInputProps 
   markdownStyle?: PartialMarkdownStyle;
   formatSelection?: (text: string, selectionStart: number, selectionEnd: number, formatCommand: string) => FormatSelectionResult;
   parser: (value: string) => MarkdownRange[];
+  // NovelAI fork: height cap (dp) for the Android scroll-pin (see the decorator
+  // spec). Passed to the decorator, not the TextInput.
+  maxScrollHeight?: number;
 }
 
 type FormatSelectionResult = {
@@ -117,6 +120,7 @@ const MarkdownTextInput = React.forwardRef<MarkdownTextInput, MarkdownTextInputP
       style={styles.displayContents}
       markdownStyle={markdownStyle}
       parserId={parserId}
+      maxScrollHeight={props.maxScrollHeight}
     >
       <TextInput
         {...props}

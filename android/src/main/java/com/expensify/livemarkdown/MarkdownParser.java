@@ -66,7 +66,38 @@ public class MarkdownParser {
           if (length == 0 || start + length > text.length()) {
             continue;
           }
-          markdownRanges.add(new MarkdownRange(type, start, length, depth));
+          MarkdownRange markdownRange = new MarkdownRange(type, start, length, depth);
+          // NovelAI fork: read optional per-range style for 'highlight' ranges.
+          // Colors are ARGB ints but arrive as JS doubles; cast via long to keep
+          // the full 32-bit pattern (alpha-high values exceed Integer.MAX_VALUE).
+          if (range.has("color")) {
+            markdownRange.setColor((int) (long) range.getDouble("color"));
+          }
+          if (range.has("backgroundColor")) {
+            markdownRange.setBackgroundColor((int) (long) range.getDouble("backgroundColor"));
+          }
+          if (range.has("borderRadius")) {
+            markdownRange.setBorderRadius((float) range.getDouble("borderRadius"));
+          }
+          if (range.has("label")) {
+            markdownRange.setLabel(range.getString("label"));
+          }
+          if (range.has("copyText")) {
+            markdownRange.setCopyText(range.getString("copyText"));
+          }
+          if (range.has("borderColor")) {
+            markdownRange.setBorderColor((int) (long) range.getDouble("borderColor"));
+          }
+          if (range.has("borderWidth")) {
+            markdownRange.setBorderWidth((float) range.getDouble("borderWidth"));
+          }
+          if (range.has("paddingHorizontal")) {
+            markdownRange.setPaddingHorizontal((float) range.getDouble("paddingHorizontal"));
+          }
+          if (range.has("fontScale")) {
+            markdownRange.setFontScale((float) range.getDouble("fontScale"));
+          }
+          markdownRanges.add(markdownRange);
         }
       } catch (JSONException e) {
         RNLog.w(mReactContext, "[react-native-live-markdown] Incorrect schema of worklet parser output: " + e.getMessage());
